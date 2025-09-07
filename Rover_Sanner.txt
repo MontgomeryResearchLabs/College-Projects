@@ -1,0 +1,197 @@
+----------------------------------------------------------------------------------
+-- Company: KENNESAW STATE UNIVERSITY
+-- Engineer: TRAMMELL MONTGOMERY, RAUL QUEVEDO
+-- 
+-- Design Name: AUTOMATIC ROVER SCAN
+-- Module Name: Automatic - Automatic_ARCH
+-- Project Name: ROVER SCANNER
+-- Description:  The following codes takes in a target distance and also inital driection.
+-- the input distance serves as a boundry for the scanner, it scans and once it reaches the
+-- target distance it then turns 
+-- 
+-- Dependencies: 
+-- 
+-- Revision:
+-- Revision 0.01 - File Created
+-- Additional Comments:
+-- 
+----------------------------------------------------------------------------------
+
+
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+use IEEE.NUMERIC_STD.ALL;
+-- Uncomment the following library declaration if using
+-- arithmetic functions with Signed or Unsigned values
+--use IEEE.NUMERIC_STD.ALL;
+
+-- Uncomment the following library declaration if instantiating
+-- any Xilinx leaf cells in this code.
+--library UNISIM;
+--use UNISIM.VComponents.all;
+
+entity Automatic is
+    Port ( Start_en : in STD_LOGIC;
+           clock : in STD_LOGIC;
+           reset : in STD_LOGIC;
+           distance : in STD_LOGIC_VECTOR( 31 DOWNTO 0 );
+           clearDeltaDistance: in STD_LOGIC;
+           
+           direction : out STD_LOGIC_VECTOR (8 DOWNTO 0);
+           motor_left: out STD_LOGIC_VECTOR( 2 DOWNTO 0);
+           motor_right: out STD_LOGIC_VECTOR (2 DOWNTO 0));
+end Automatic;
+
+architecture Automatic_ARCH of Automatic is
+
+constant ACTIVE: std_logic := '1';
+
+----output-----------------------------------------------------------
+----left----right----
+constant LEFT_STOP: std_logic_vector(2 downto 0) := "000";
+constant RIGHT_STOP: std_logic_vector(2 downto 0) := "000";
+
+----left forwardslow ----right forwardfast----
+constant LEFT_FORWARDSLOW: std_logic_vector(5 downto 0) := "001";
+constant RIGHT_FORWARDFAST: std_logic_vector(5 downto 0) := "010";
+
+----left backwardslow----right backwardfast----
+constant LEFT_BACKWARDSLOW: std_logic_vector(2 downto 0) := "101";
+constant RIGHT_BACKWARDFAST: std_logic_vector(2 downto 0) := "110";
+
+----left forwardfast----right forwardslow----
+constant LEFT_FORWARDFAST: std_logic_vector(2 downto 0) := "010";
+constant RIGHT_FORWARDSLOW: std_logic_vector(2 downto 0) := "001";
+
+----right backwardslow----
+constant RIGHT_BACKWARDSLOW : std_logic_vector(2 downto 0) := "101";
+
+----left backwardfast----
+constant LEFT_BACKWARDFAST : std_logic_vector(2 downto 0) := "110";
+
+type State_t is (DUAL_STOP1, DUAL_STOP2, DUAL_STOP3, START_FORWARD1, 
+START_FORWARD2, FORWARD1, FORWARD2, TURN);
+
+signal currentState: State_t;
+signal nextState: State_t;
+
+signal startEnable: std_logic;
+signal deltaDistance: integer;
+signal direction180: integer;
+
+begin
+
+    STATE_REGISTER: process( reset, clock)
+    begin
+        if(reset = ACTIVE) then
+            currentState <= DUAL_STOP1;
+        elsif
+        (rising_edge(clock)) then
+            currentState <= nextState;
+        end if;
+    end process;
+
+
+
+    STATE_TRANSITION: process(currentState, deltaDistance)
+        begin
+            case currentState is
+                when START_FORWARD1 =>
+                    motor_left <= LEFT_STOP;
+                    motor_right <= RIGHT_STOP;
+                    nextState <= FORWARD1;
+ 
+                when FORWARD1 =>
+                    motor_left <= LEFT_FORWARDFAST;
+                    motor_right <= RIGHT_FORWARDFAST;
+                    if (deltaDistance = 40) then
+                        nextState <= DUAL_STOP2;
+                    else
+                        nextState <= FORWARD1;
+                    end if;
+
+                when DUAL_STOP2 => 
+                    motor_left <= LEFT_STOP;
+                    motor_right <= RIGHT_STOP;
+                    nextState <= TURN;
+   
+                when TURN =>
+                    motor_left <= LEFT_FORWARDFAST;
+                    motor_right <= RIGHT_FORWARDSLOW;
+                    nextState <= DUAL_STOP3;
+         
+                when DUAL_STOP3 =>
+                    motor_left <= LEFT_STOP;
+                    motor_right <= RIGHT_STOP;
+                    nextState <= START_FORWARD2;
+                
+                when DUAL_STOP3 =>
+                    motor_left <= LEFT_STOP;
+                    motor_right <= RIGHT_STOP;
+                    nextState <= START_FORWARD2;
+
+		        when START_FORWARD2 => 
+		            motor_left <= LEFT_STOP;
+                    motor_right <= RIGHT_STOP;
+                    nextState <= FORWARD2;
+
+	           when FORWARD2 => 
+		            motor_left <= LEFT_FORWARDFAST;
+                    motor_right <= RIGHT_FORWARDFAST;
+                    if (deltaDistance = 40) then
+                        nextState <= DUAL_STOP1;
+                    else
+                        nextState <= FORWARD2;
+                    end if;
+           end case;
+       end process; 
+    
+    SYNC_START: process(reset, clock)
+    Variable unsafeOutput: std_logic;
+        begin
+        if (reset = ACTIVE) then
+            startEnable <= not ACTIVE;
+            unsafeOutput := not ACTIVE;
+        elsif (rising_edge(clock)) then
+            startEnable <= unsafeOutput;
+            unsafeOutput :=  ACTIVE;
+        end if;
+    end process;  
+    
+    
+    DELTA_DISTANCE: process (clock, reset)
+    variable initialDistance: integer;
+    
+        begin
+        if (reset = active) then
+        initialDistance := 0;
+        elsif (rising_edge(clock)) then
+            if (clearDeltaDistance = ACTIVE) then
+                initialDistance := TO_INTEGER(unsigned(distance));
+            end if;
+        end if;
+        deltaDistance <= TO_INTEGER (unsigned(distance)) - initialDistance;
+    end process;
+end Automatic_ARCH;
+
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
