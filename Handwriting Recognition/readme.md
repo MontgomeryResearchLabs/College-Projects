@@ -1,3 +1,5 @@
+
+
 **Digit Handwriting Recogntion System**
 ------------------------------------------------------
 
@@ -17,3 +19,6 @@ The model was loaded to a Raspberry Pi 3B+ where it had an 8x8 LED matrix senseh
 **FINAL RESULT**
 
 The end result was a properly functioning recognition system that identified digits with 90-95% accuracy.
+
+
+![IMG_9400](https://github.com/user-attachments/assets/4a151383-5551-48d7-b06e-79f8c9e1b034)
